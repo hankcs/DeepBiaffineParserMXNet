@@ -4,6 +4,7 @@ import argparse
 import os
 import pickle
 import time
+import random
 from os.path import isfile
 
 import numpy as np
@@ -19,6 +20,8 @@ from test import test
 
 if __name__ == "__main__":
     np.random.seed(666)
+    random.seed(666)
+    mx.random.seed(666)
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('--config_file', default='configs/default.ini')
     args, extra_args = arg_parser.parse_known_args()
@@ -31,12 +34,12 @@ if __name__ == "__main__":
                   config.min_occur_count)
     if not config.debug:
         pickle.dump(vocab, open(config.save_vocab_path, 'wb'))
-    with mx.Context(mx.gpu(0) if 'cuda' in os.environ['PATH'] else mx.cpu()):
+    with (mx.gpu(0) if 'cuda' in os.environ['PATH'] else mx.cpu()):
         parser = BiaffineParser(vocab, config.word_dims, config.tag_dims, config.dropout_emb, config.lstm_layers,
                             config.lstm_hiddens, config.dropout_lstm_input, config.dropout_lstm_hidden,
                             config.mlp_arc_size,
                             config.mlp_rel_size, config.dropout_mlp, config.debug)
-        parser.initialize(force_reinit=True)
+        parser.initialize() # force_reinit=True will erase the embedding
         data_loader = DataLoader(config.train_file, config.num_buckets_train, vocab)
         # trainer = dy.AdamTrainer(pc, config.learning_rate, config.beta_1, config.beta_2, config.epsilon)
         trainer = gluon.Trainer(parser.collect_params(), 'adam', {'learning_rate': config.learning_rate})
@@ -48,17 +51,19 @@ if __name__ == "__main__":
         while global_step < config.train_iters:
             print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ' Start training epoch #%d' % (epoch,))
             epoch += 1
+            start_time = time.time()
             for words, tags, arcs, rels in data_loader.get_batches(batch_size=config.train_batch_size, shuffle=True):
                 with autograd.record():
                     arc_accuracy, rel_accuracy, overall_accuracy, loss = parser.run(words, tags, arcs,
                                                                                     rels)
                     loss = loss * 0.5
-                    loss_value = loss.asscalar()
-                    print("Step #%d: Acc: arc %.2f, rel %.2f, overall %.2f, loss %.3f\r\r" % (
-                        global_step, arc_accuracy, rel_accuracy, overall_accuracy, loss_value))
-                    # trainer.set_learning_rate(config.learning_rate * config.decay ** (global_step / config.decay_steps))
                 loss.backward()
                 trainer.step(config.train_batch_size)
+                loss_value = loss.asscalar() # asscalar is blocking, so it's better to delay the
+                                             # call until backward() and step() are called
+                print("Step #%d: Acc: arc %.2f, rel %.2f, overall %.2f, loss %.3f\r\r" % (
+                    global_step, arc_accuracy, rel_accuracy, overall_accuracy, loss_value))
+                # trainer.set_learning_rate(config.learning_rate * config.decay ** (global_step / config.decay_steps))
                 global_step += 1
                 if global_step % config.validate_every == 0:
                     print('\nTest on development set')
@@ -68,3 +73,4 @@ if __name__ == "__main__":
                     if global_step > config.save_after and UAS > best_UAS:
                         best_UAS = UAS
                         parser.save(config.save_model_path)
+            print('duration : {:.2f}'.format(time.time() - start_time))
