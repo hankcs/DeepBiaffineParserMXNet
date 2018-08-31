@@ -40,7 +40,7 @@ if __name__ == "__main__":
                                 config.mlp_rel_size, config.dropout_mlp, config.debug)
         data_loader = DataLoader(config.train_file, config.num_buckets_train, vocab)
         # trainer = dy.AdamTrainer(pc, config.learning_rate, config.beta_1, config.beta_2, config.epsilon)
-        trainer = gluon.Trainer(parser.model.collect_params(), 'adam', {'learning_rate': config.learning_rate})
+        trainer = gluon.Trainer(parser.collect_params(), 'adam', {'learning_rate': config.learning_rate})
 
         global_step = 0
         epoch = 0
