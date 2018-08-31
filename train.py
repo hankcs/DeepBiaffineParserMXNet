@@ -17,7 +17,6 @@ from models import BiaffineParser
 from run.config import Config
 from test import test
 
-
 if __name__ == "__main__":
     np.random.seed(666)
     random.seed(666)
@@ -36,9 +35,9 @@ if __name__ == "__main__":
         pickle.dump(vocab, open(config.save_vocab_path, 'wb'))
     with (mx.gpu(0) if 'cuda' in os.environ['PATH'] else mx.cpu()):
         parser = BiaffineParser(vocab, config.word_dims, config.tag_dims, config.dropout_emb, config.lstm_layers,
-                            config.lstm_hiddens, config.dropout_lstm_input, config.dropout_lstm_hidden,
-                            config.mlp_arc_size,
-                            config.mlp_rel_size, config.dropout_mlp, config.debug)
+                                config.lstm_hiddens, config.dropout_lstm_input, config.dropout_lstm_hidden,
+                                config.mlp_arc_size,
+                                config.mlp_rel_size, config.dropout_mlp, config.debug)
         data_loader = DataLoader(config.train_file, config.num_buckets_train, vocab)
         # trainer = dy.AdamTrainer(pc, config.learning_rate, config.beta_1, config.beta_2, config.epsilon)
         trainer = gluon.Trainer(parser.model.collect_params(), 'adam', {'learning_rate': config.learning_rate})
@@ -58,13 +57,14 @@ if __name__ == "__main__":
                     loss = loss * 0.5
                 loss.backward()
                 trainer.step(config.train_batch_size)
-                loss_value = loss.asscalar() # asscalar is blocking, so it's better to delay the
-                                             # call until backward() and step() are called
-                print("Step #%d: Acc: arc %.2f, rel %.2f, overall %.2f, loss %.3f\r\r" % (
-                    global_step, arc_accuracy, rel_accuracy, overall_accuracy, loss_value))
+                loss_value = loss.asscalar()  # asscalar is blocking, so it's better to delay the
+                # call until backward() and step() are called
+                print("\rStep #%d: Acc: arc %.2f, rel %.2f, overall %.2f, loss %.3f" % (
+                    global_step, arc_accuracy, rel_accuracy, overall_accuracy, loss_value), end='')
                 # trainer.set_learning_rate(config.learning_rate * config.decay ** (global_step / config.decay_steps))
                 global_step += 1
                 if global_step % config.validate_every == 0:
+                    print('\nduration : {:.2f}'.format(time.time() - start_time))
                     print('\nTest on development set')
                     LAS, UAS = test(parser, vocab, config.num_buckets_valid, config.test_batch_size, config.dev_file,
                                     os.path.join(config.save_dir, 'valid_tmp'))
@@ -72,4 +72,3 @@ if __name__ == "__main__":
                     if global_step > config.save_after and UAS > best_UAS:
                         best_UAS = UAS
                         parser.save(config.save_model_path)
-            print('duration : {:.2f}'.format(time.time() - start_time))
