@@ -203,7 +203,7 @@ class BiaffineParser(nn.Block):
             arc_probs = np.transpose(
                 np.reshape(nd.softmax(flat_arc_logits).asnumpy(), (seq_len, seq_len, batch_size), 'F'))
 
-        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds)).reshape(seq_len * batch_size, 1)
+        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds.asnumpy())).reshape(seq_len * batch_size, 1)
         _target_mat = _target_vec * nd.ones((1, self._vocab.rel_size))
 
         partial_rel_logits = nd.pick(flat_rel_logits, _target_mat.T, axis=0)
