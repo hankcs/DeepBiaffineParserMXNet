@@ -197,7 +197,7 @@ class BiaffineParser(nn.Block):
         flat_rel_logits = reshape_fortran(rel_logits, (seq_len, self._vocab.rel_size, seq_len * batch_size))
         # (#head x rel_size) x (#dep x batch_size)
 
-        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds)).reshape(seq_len * batch_size, 1)
+        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds.asnumpy())).reshape(seq_len * batch_size, 1)
         _target_mat = _target_vec * nd.ones((1, self._vocab.rel_size))
 
         partial_rel_logits = nd.pick(flat_rel_logits, _target_mat.T, axis=0)
