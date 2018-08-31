@@ -37,7 +37,7 @@ class Biaffine(nn.HybridBlock):
         self.pret_word_embs = embedding_from_numpy(vocab.get_pret_embs()) if vocab.has_pret_embs() else None
         self.tag_embs = embedding_from_numpy(vocab.get_tag_embs(tag_dims))
 
-        self.bi_lstm = rnn.LSTM(lstm_hiddens, bidirectional=True)
+        self.bi_lstm = rnn.LSTM(lstm_hiddens, bidirectional=True, num_layers=lstm_layers)
 
         # parameters
         self.mlp_dep = nn.Dense(mlp_size, in_units=2*lstm_hiddens, flatten=False)
