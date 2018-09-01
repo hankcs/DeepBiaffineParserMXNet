@@ -9,11 +9,13 @@ from mxnet.gluon.loss import SoftmaxCrossEntropyLoss
 from common.utils import biLSTM, leaky_relu, bilinear, orthonormal_initializer, arc_argmax, rel_argmax, \
     orthonormal_VanillaBiLSTMBuilder, reshape_fortran
 
+
 def embedding_from_numpy(_we):
     word_embs = nn.Embedding(_we.shape[0], _we.shape[1])
     word_embs.initialize()
     word_embs.weight.set_data(_we)
     return word_embs
+
 
 class Biaffine(nn.HybridBlock):
     def __init__(self, vocab,
@@ -40,8 +42,8 @@ class Biaffine(nn.HybridBlock):
         self.bi_lstm = rnn.LSTM(lstm_hiddens, bidirectional=True, num_layers=lstm_layers)
 
         # parameters
-        self.mlp_dep = nn.Dense(mlp_size, in_units=2*lstm_hiddens, flatten=False)
-        self.mlp_head = nn.Dense(mlp_size, in_units=2*lstm_hiddens, flatten=False)
+        self.mlp_dep = nn.Dense(mlp_size, in_units=2 * lstm_hiddens, flatten=False)
+        self.mlp_head = nn.Dense(mlp_size, in_units=2 * lstm_hiddens, flatten=False)
         self.leaky_relu = nn.LeakyReLU(alpha=.1)
         self.dropout_mlp = dropout_mlp
 
@@ -51,10 +53,7 @@ class Biaffine(nn.HybridBlock):
         self.mlp_dep.weight.set_data(W)
         self.mlp_head.weight.set_data(W)
 
-
-
-    def hybrid_forward(self, F, word_inputs, unked_words, tag_inputs,
-                       wm, tm):
+    def hybrid_forward(self, F, word_inputs, unked_words, tag_inputs, wm, tm):
         word_embs = self.word_embs(unked_words)
         if self.pret_word_embs:
             word_embs = word_embs + self.pret_word_embs(word_inputs)
@@ -173,15 +172,18 @@ class BiaffineParser(nn.Block):
         unked_words = nd.array(unked_words, dtype=np.int32)
         tag_inputs = nd.array(tag_inputs)
 
-        wm, tm = self.generate_emb_mask(seq_len, batch_size)
+        if is_train:
+            wm, tm = self.generate_emb_mask(seq_len, batch_size)
+        else:
+            wm, tm = nd.ones((seq_len, batch_size, 1)), nd.ones((seq_len, batch_size, 1))
         dep_arc, dep_rel, head_arc, head_rel = self.model(word_inputs, unked_words,
                                                           tag_inputs, wm, tm)
 
         arc_W, rel_W = self.arc_W.data(), self.rel_W.data()
         arc_logits = bilinear(dep_arc, arc_W, head_arc, self.mlp_arc_size, seq_len, batch_size, num_outputs=1,
-                              bias_x=True, bias_y=False) # may contain unnecessary transpose inside
+                              bias_x=True, bias_y=False)  # may contain unnecessary transpose inside
         rel_logits = bilinear(dep_rel, rel_W, head_rel, self.mlp_rel_size, seq_len, batch_size,
-                              num_outputs=self._vocab.rel_size, bias_x=True, bias_y=True) # same
+                              num_outputs=self._vocab.rel_size, bias_x=True, bias_y=True)  # same
 
         flat_arc_logits = reshape_fortran(arc_logits, (seq_len, seq_len * batch_size))
         flat_rel_logits = reshape_fortran(rel_logits, (seq_len, self._vocab.rel_size, seq_len * batch_size))
@@ -203,7 +205,8 @@ class BiaffineParser(nn.Block):
             arc_probs = np.transpose(
                 np.reshape(nd.softmax(flat_arc_logits).asnumpy(), (seq_len, seq_len, batch_size), 'F'))
 
-        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds.asnumpy())).reshape(seq_len * batch_size, 1)
+        _target_vec = nd.array(targets_1D if is_train else flatten_numpy(arc_preds.asnumpy())).reshape(
+            seq_len * batch_size, 1)
         _target_mat = _target_vec * nd.ones((1, self._vocab.rel_size))
 
         partial_rel_logits = nd.pick(flat_rel_logits, _target_mat.T, axis=0)
