@@ -16,6 +16,6 @@ python3 train.py --config configs/ptb-debug.ini
 ## TODO
 
 - [ ] Variational RNN
-- [ ] Bug in relation prediction causing low LAS
+- [x] Bug in relation prediction causing low LAS
 - [ ] Performance issue
 

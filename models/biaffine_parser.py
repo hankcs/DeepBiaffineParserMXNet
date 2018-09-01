@@ -218,7 +218,7 @@ class BiaffineParser(nn.Block):
             rel_loss = nd.sum(losses * mask_1D_tensor) / num_tokens
 
         if not is_train:
-            rel_probs = np.transpose(np.reshape(nd.softmax(nd.transpose(flat_rel_logits)).asnumpy(),
+            rel_probs = np.transpose(np.reshape(nd.softmax(flat_rel_logits.transpose([1, 0, 2]), axis=0).asnumpy(),
                                                 (self._vocab.rel_size, seq_len, seq_len, batch_size), 'F'))
         # batch_size x #dep x #head x #nclasses
 
