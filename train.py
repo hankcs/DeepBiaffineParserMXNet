@@ -72,3 +72,7 @@ if __name__ == "__main__":
                     if global_step > config.save_after and UAS > best_UAS:
                         best_UAS = UAS
                         parser.save(config.save_model_path)
+        parser.load(config.save_model_path)
+        print('Test score')
+        LAS, UAS = test(parser, vocab, config.num_buckets_valid, config.test_batch_size, config.dev_file,
+                        os.path.join(config.save_dir, 'valid_tmp'))
