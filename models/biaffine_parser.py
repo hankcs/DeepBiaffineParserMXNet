@@ -10,8 +10,10 @@ from common.utils import biLSTM, leaky_relu, bilinear, orthonormal_initializer, 
     orthonormal_VanillaBiLSTMBuilder, reshape_fortran
 
 
-def embedding_from_numpy(_we):
+def embedding_from_numpy(_we, trainable=True):
     word_embs = nn.Embedding(_we.shape[0], _we.shape[1])
+    if not trainable:
+        word_embs.collect_params().setattr('grad_req', 'null')
     word_embs.initialize()
     word_embs.weight.set_data(_we)
     return word_embs
@@ -36,7 +38,7 @@ class Biaffine(nn.HybridBlock):
 
         # layers
         self.word_embs = embedding_from_numpy(vocab.get_word_embs(word_dims))
-        self.pret_word_embs = embedding_from_numpy(vocab.get_pret_embs()) if vocab.has_pret_embs() else None
+        self.pret_word_embs = embedding_from_numpy(vocab.get_pret_embs(), False) if vocab.has_pret_embs() else None
         self.tag_embs = embedding_from_numpy(vocab.get_tag_embs(tag_dims))
 
         self.bi_lstm = rnn.LSTM(lstm_hiddens, bidirectional=True, num_layers=lstm_layers)
