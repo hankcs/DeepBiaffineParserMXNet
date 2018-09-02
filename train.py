@@ -51,7 +51,6 @@ if __name__ == "__main__":
         best_UAS = 0.
         history = lambda x, y: open(os.path.join(config.save_dir, 'valid_history'), 'a').write('%.2f %.2f\n' % (x, y))
         while global_step < config.train_iters:
-            # print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ' Start training epoch #%d' % (epoch,))
             start_time = time.time()
             for words, tags, arcs, rels in data_loader.get_batches(batch_size=config.train_batch_size, shuffle=True):
                 with autograd.record():
