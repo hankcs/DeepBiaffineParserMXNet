@@ -3,6 +3,7 @@
 import argparse
 import os
 import pickle
+import sys
 import time
 import random
 from os.path import isfile
@@ -46,12 +47,11 @@ if __name__ == "__main__":
                                                                   'epsilon': config.epsilon
                                                                   })
         global_step = 0
-        epoch = 0
+        epoch = 1
         best_UAS = 0.
         history = lambda x, y: open(os.path.join(config.save_dir, 'valid_history'), 'a').write('%.2f %.2f\n' % (x, y))
         while global_step < config.train_iters:
-            print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ' Start training epoch #%d' % (epoch,))
-            epoch += 1
+            # print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), ' Start training epoch #%d' % (epoch,))
             start_time = time.time()
             for words, tags, arcs, rels in data_loader.get_batches(batch_size=config.train_batch_size, shuffle=True):
                 with autograd.record():
@@ -64,9 +64,11 @@ if __name__ == "__main__":
                 # call until backward() and step() are called
                 print("\rStep #%d: Acc: arc %.2f, rel %.2f, overall %.2f, loss %.3f" % (
                     global_step, arc_accuracy, rel_accuracy, overall_accuracy, loss_value), end='')
+                sys.stdout.flush()
                 # trainer.set_learning_rate(config.learning_rate * config.decay ** (global_step / config.decay_steps))
                 global_step += 1
                 if global_step % config.validate_every == 0:
+                    epoch += 1
                     print('\nduration : {:.2f}'.format(time.time() - start_time))
                     print('Test on development set')
                     LAS, UAS = test(parser, vocab, config.num_buckets_valid, config.test_batch_size, config.dev_file,
