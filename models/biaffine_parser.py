@@ -238,11 +238,12 @@ class BiaffineParser(nn.Block):
 
         outputs = []
 
-        for msk, arc_prob, rel_prob in zip(np.transpose(mask), arc_probs, rel_probs):
+        for msk, arc_prob, rel_prob, a in zip(np.transpose(mask), arc_probs, rel_probs, arc_preds.asnumpy().transpose([1, 0])):
             # parse sentences one by one
             msk[0] = 1.
             sent_len = int(np.sum(msk))
             arc_pred = arc_argmax(arc_prob, sent_len, msk)
+            arc_pred = a.astype(int)
             rel_prob = rel_prob[np.arange(len(arc_pred)), arc_pred]
             rel_pred = rel_argmax(rel_prob, sent_len)
             outputs.append((arc_pred[1:sent_len], rel_pred[1:sent_len]))
