@@ -13,6 +13,7 @@ import mxnet as mx
 from mxnet import autograd, gluon
 
 from common.data import DataLoader, Vocab
+from common.exponential_scheduler import ExponentialScheduler
 from common.utils import eprint
 from models import BiaffineParser
 from run.config import Config
@@ -40,12 +41,10 @@ if __name__ == "__main__":
                                 config.mlp_arc_size,
                                 config.mlp_rel_size, config.dropout_mlp, config.debug)
         data_loader = DataLoader(config.train_file, config.num_buckets_train, vocab)
-        # trainer = dy.AdamTrainer(pc, config.learning_rate, config.beta_1, config.beta_2, config.epsilon)
-        trainer = gluon.Trainer(parser.collect_params(), 'adam', {'learning_rate': config.learning_rate,
-                                                                  'beta1': config.beta_1,
-                                                                  'beta2': config.beta_2,
-                                                                  'epsilon': config.epsilon
-                                                                  })
+        scheduler = ExponentialScheduler(config.learning_rate, config.decay, config.decay_steps)
+        optimizer = mx.optimizer.Adam(config.learning_rate, config.beta_1, config.beta_2, config.epsilon,
+                                      lr_scheduler=scheduler)
+        trainer = gluon.Trainer(parser.collect_params(), optimizer=optimizer)
         global_step = 0
         epoch = 0
         best_UAS = 0.
