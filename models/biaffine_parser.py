@@ -47,7 +47,7 @@ class Biaffine(nn.HybridBlock):
         self.mlp_dep = nn.Dense(mlp_size, in_units=2 * lstm_hiddens, flatten=False)
         self.mlp_head = nn.Dense(mlp_size, in_units=2 * lstm_hiddens, flatten=False)
         self.leaky_relu = nn.LeakyReLU(alpha=.1)
-        self.dropout_mlp = dropout_mlp
+        self.dropout_mlp = nn.Dropout(rate=dropout_mlp, axes=[0])
 
         self.initialize()
 
@@ -67,11 +67,12 @@ class Biaffine(nn.HybridBlock):
         emb_inputs = F.concat(word_embs, tag_embs, dim=2)
 
         top_recur = self.bi_lstm(emb_inputs)
+        top_recur = self.dropout_mlp(top_recur)
 
         dep_in = self.mlp_dep(top_recur)
         head_in = self.mlp_head(top_recur)
-        dep = self.leaky_relu(dep_in).transpose(axes=(2, 0, 1))
-        head = self.leaky_relu(head_in).transpose(axes=(2, 0, 1))
+        dep = self.dropout_mlp(self.leaky_relu(dep_in)).transpose(axes=(2, 0, 1))
+        head = self.dropout_mlp(self.leaky_relu(head_in)).transpose(axes=(2, 0, 1))
         # axis=2 also works, so need to verify whether transposes above are needed
         dep_arc = dep.slice_axis(begin=0, end=self.mlp_arc_size, axis=0)
         dep_rel = dep.slice_axis(begin=self.mlp_arc_size, end=None, axis=0)
