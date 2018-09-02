@@ -47,7 +47,7 @@ if __name__ == "__main__":
                                                                   'epsilon': config.epsilon
                                                                   })
         global_step = 0
-        epoch = 1
+        epoch = 0
         best_UAS = 0.
         history = lambda x, y: open(os.path.join(config.save_dir, 'valid_history'), 'a').write('%.2f %.2f\n' % (x, y))
         while global_step < config.train_iters:
@@ -69,8 +69,7 @@ if __name__ == "__main__":
                 global_step += 1
                 if global_step % config.validate_every == 0:
                     epoch += 1
-                    print('\nduration : {:.2f}'.format(time.time() - start_time))
-                    print('Test on development set')
+                    print('\n epoch {} duration : {:.2f}'.format(epoch, time.time() - start_time))
                     LAS, UAS = test(parser, vocab, config.num_buckets_valid, config.test_batch_size, config.dev_file,
                                     os.path.join(config.save_dir, 'valid_tmp'))
                     history(LAS, UAS)
